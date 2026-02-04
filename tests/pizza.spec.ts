@@ -96,6 +96,7 @@ async function basicInit(page: Page) {
 
 test("login", async ({ page }) => {
   await basicInit(page);
+
   await page.getByRole("link", { name: "Login" }).click();
   await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
   await page.getByRole("textbox", { name: "Password" }).fill("a");
