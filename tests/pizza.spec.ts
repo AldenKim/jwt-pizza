@@ -136,5 +136,10 @@ test("purchase with login", async ({ page }) => {
   await page.getByRole("button", { name: "Pay now" }).click();
 
   // Check balance
+  await expect(page.getByRole("heading")).toContainText(
+    "Here is your JWT Pizza!",
+  );
+  await expect(page.getByRole("main")).toContainText("0.008 ₿");
+  await expect(page.getByRole("main")).toContainText("2");
   await expect(page.getByText("0.008")).toBeVisible();
 });
