@@ -37,6 +37,12 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:coverage
 
+      - name: Upload CI Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-coverage-report
+          path: coverage/
+
       - name: Update coverage
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
