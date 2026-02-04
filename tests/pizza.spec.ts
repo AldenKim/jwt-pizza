@@ -105,6 +105,10 @@ test("login", async ({ page }) => {
   await expect(page.getByRole("link", { name: "KC" })).toBeVisible();
 });
 
+test("register", async ({ page }) => {
+  
+});
+
 test("purchase with login", async ({ page }) => {
   await basicInit(page);
 
@@ -143,3 +147,5 @@ test("purchase with login", async ({ page }) => {
   await expect(page.getByRole("main")).toContainText("2");
   await expect(page.getByText("0.008")).toBeVisible();
 });
+
+test("purchase with register", async ({ page }) => {});
