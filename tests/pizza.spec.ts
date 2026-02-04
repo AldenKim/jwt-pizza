@@ -152,6 +152,24 @@ test("register", async ({ page }) => {
   await expect(page.getByRole("heading")).toContainText("The web's best pizza");
 });
 
+test("login, then logout", async ({ page }) => {
+  await basicInit(page);
+
+  await page.goto("http://localhost:5173/");
+
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("a");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  await page.getByRole("link", { name: "Logout" }).click();
+
+  await expect(page.locator("#navbar-dark")).toContainText("Login");
+  await expect(page.locator("#navbar-dark")).toContainText("Register");
+});
+
 test("purchase with login", async ({ page }) => {
   await basicInit(page);
 
@@ -234,4 +252,41 @@ test("purchase with register", async ({ page }) => {
   await expect(page.getByRole("main")).toContainText("0.008 ₿");
 });
 
-test("Navigate to the about page", async ({ page }) => {});
+test("Navigate to the about page", async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole("link", { name: "About" }).click();
+  await expect(page.getByRole("main")).toContainText("The secret sauce");
+  await expect(page.getByRole("main")).toContainText("Our employees");
+  await page.getByRole("img", { name: "Employee stock photo" }).first().click();
+});
+
+test("Navigate to history page", async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole("link", { name: "History" }).click();
+  await expect(page.getByRole("heading")).toContainText("Mama Rucci, my my");
+  await expect(page.getByRole("main")).toContainText(
+    "However, it was the Romans who truly popularized pizza-like dishes. They would top their flatbreads with various ingredients such as cheese, honey, and bay leaves.",
+  );
+});
+
+test("Navigate to franchise page not logged in", async ({ page }) => {
+  await basicInit(page);
+
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "If you are already a franchisee, pleaseloginusing your franchise account",
+  );
+  await expect(page.getByRole("main")).toContainText("Call now");
+  await expect(page.getByRole("main")).toContainText("800-555-5555");
+  await expect(page.locator("tbody")).toContainText("2020");
+  await expect(page.locator("thead")).toContainText("Year");
+  await expect(page.locator("thead")).toContainText("Profit");
+  await expect(page.locator("thead")).toContainText("Costs");
+  await expect(page.locator("thead")).toContainText("Franchise Fee");
+  await expect(page.getByRole("main")).toContainText("Unleash Your Potential");
+});
