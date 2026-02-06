@@ -137,10 +137,6 @@ async function basicInit(page: Page) {
 
   // Create a store
   await page.route(/\/api\/franchise\/\d+\/store$/, async (route) => {
-    if (route.request().method() !== "POST") {
-      return route.fallback();
-    }
-
     const requestBody = route.request().postDataJSON();
     const storeResponse = {
       id: Math.floor(Math.random() * 1000), // Simulate a new database ID
@@ -150,10 +146,25 @@ async function basicInit(page: Page) {
     };
 
     mockStores.push(storeResponse);
-
+    expect(route.request().method()).toBe("POST");
     await route.fulfill({
       status: 200,
       json: storeResponse,
+    });
+  });
+
+  //Delete a store
+  await page.route(/\/api\/franchise\/\d+\/store\/\d+$/, async (route) => {
+    const urlParts = route.request().url().split("/");
+    const storeIdToDelete = parseInt(urlParts[urlParts.length - 1]);
+
+    expect(route.request().method()).toBe("DELETE");
+
+    mockStores = mockStores.filter((store) => store.id !== storeIdToDelete);
+
+    await route.fulfill({
+      status: 200,
+      json: { message: "store deleted" },
     });
   });
 
@@ -510,4 +521,43 @@ test("Login as Franchisee and Create a store", async ({ page }) => {
 
   //Check and make sure store was created
   await expect(page.locator("tbody")).toContainText(randomStoreName);
+});
+
+test("Login as Franchisee and Delete a store", async ({ page }) => {
+  await basicInit(page);
+  const randomStoreName = randomName();
+
+  // Login as franchisee
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("f@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("franchisee");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  //Navigate to franchise dashboard
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+
+  // Open a temp store
+  await page.getByRole("button", { name: "Create store" }).click();
+  await page.getByRole("textbox", { name: "store name" }).click();
+  await page.getByRole("textbox", { name: "store name" }).fill(randomStoreName);
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator("tbody")).toContainText("Close");
+  await expect(page.locator("tbody")).toContainText(randomStoreName);
+
+  //
+  await page
+    .getByRole("row", { name: `${randomStoreName} 0 ₿ Close` })
+    .getByRole("button")
+    .click();
+  await expect(page.getByRole("heading")).toContainText("Sorry to see you go");
+  await expect(page.getByRole("main")).toContainText(
+    `Are you sure you want to close the pizzaPocket store ${randomStoreName} ? This cannot be restored. All outstanding revenue will not be refunded.`,
+  );
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.locator("tbody")).not.toContainText(randomStoreName);
 });
