@@ -108,6 +108,10 @@ async function basicInit(page: Page) {
 
   // Order a pizza.
   await page.route("*/**/api/order", async (route) => {
+    if (route.request().method() !== "POST") {
+      return route.fallback();
+    }
+
     const orderReq = route.request().postDataJSON();
     const orderRes = {
       order: { ...orderReq, id: 23 },
@@ -115,6 +119,68 @@ async function basicInit(page: Page) {
     };
     expect(route.request().method()).toBe("POST");
     await route.fulfill({ json: orderRes });
+  });
+
+  // Get a person's orders
+  await page.route("*/**/api/order", async (route) => {
+    if (route.request().method() !== "GET") {
+      return route.fallback();
+    }
+
+    const orderRes = {
+      dinerId: 2,
+      orders: [
+        {
+          id: 166,
+          franchiseId: 2,
+          storeId: 4,
+          date: "2025-09-12T22:14:00.000Z",
+          items: [
+            {
+              id: 782,
+              menuId: 1,
+              description: "Veggie",
+              price: 0.0038,
+            },
+          ],
+        },
+        {
+          id: 167,
+          franchiseId: 2,
+          storeId: 3,
+          date: "2025-09-12T22:16:33.000Z",
+          items: [
+            {
+              id: 783,
+              menuId: 1,
+              description: "Veggie",
+              price: 0.0038,
+            },
+          ],
+        },
+      ],
+      page: 1,
+    };
+
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({ json: orderRes });
+  });
+
+  await page.route("*/**/api/user/me", async (route) => {
+    const meRes = {
+      id: loggedInUser?.id,
+      name: loggedInUser?.name,
+      email: loggedInUser?.email,
+      roles: [
+        {
+          role: loggedInUser?.roles,
+        },
+      ],
+      iat: 123,
+    };
+
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({ json: meRes });
   });
 
   await page.goto("/");
@@ -155,8 +221,6 @@ test("register", async ({ page }) => {
 test("login, then logout", async ({ page }) => {
   await basicInit(page);
 
-  await page.goto("http://localhost:5173/");
-
   await page.getByRole("link", { name: "Login" }).click();
   await page.getByRole("textbox", { name: "Email address" }).click();
   await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
@@ -168,6 +232,57 @@ test("login, then logout", async ({ page }) => {
 
   await expect(page.locator("#navbar-dark")).toContainText("Login");
   await expect(page.locator("#navbar-dark")).toContainText("Register");
+});
+
+test("login and visit franchise dashboard", async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("diner");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+
+  await expect(page.getByRole("alert")).toContainText(
+    "If you are already a franchisee, pleaseloginusing your franchise account",
+  );
+  await expect(page.getByRole("main")).toContainText("Unleash Your Potential");
+  await expect(page.getByRole("main")).toContainText(
+    "So you want a piece of the pie?",
+  );
+  await expect(page.locator("thead")).toContainText("Year");
+  await expect(page.locator("thead")).toContainText("Profit");
+  await expect(page.locator("thead")).toContainText("Costs");
+  await expect(page.locator("thead")).toContainText("Franchise Fee");
+});
+
+test("login and go to diner dashboard", async ({ page }) => {
+  await basicInit(page);
+
+  //Login
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("a");
+  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByRole("link", { name: "KC" }).click();
+
+  //Look at diner dashboard
+  await expect(page.getByRole("heading")).toContainText("Your pizza kitchen");
+  await expect(page.getByRole("main")).toContainText("d@jwt.com");
+  await expect(page.getByRole("main")).toContainText("diner");
+  await expect(page.getByRole("main")).toContainText(
+    "Here is your history of all the good times.",
+  );
+  await expect(page.locator("thead")).toContainText("ID");
+  await expect(page.locator("thead")).toContainText("Price");
+  await expect(page.locator("thead")).toContainText("Date");
 });
 
 test("purchase with login", async ({ page }) => {
