@@ -23,6 +23,13 @@ async function basicInit(page: Page) {
       password: "franchisee",
       roles: [{ role: Role.Diner }, { role: Role.Franchisee, objectId: "1" }],
     },
+    "a@jwt.com": {
+      id: "5",
+      name: "Aaron Admin",
+      email: "a@jwt.com",
+      password: "admin",
+      roles: [{ role: Role.Admin }],
+    },
   };
 
   let mockStores = [
@@ -560,4 +567,25 @@ test("Login as Franchisee and Delete a store", async ({ page }) => {
   );
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.locator("tbody")).not.toContainText(randomStoreName);
+});
+
+test("Login as admin and go to admin dashboard", async ({ page }) => {
+  await basicInit(page);
+
+  // Login as admin
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  // Go to admin dashboard
+  await expect(page.locator("#navbar-dark")).toContainText("Admin");
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("list")).toContainText("admin-dashboard");
+  await expect(page.locator("h2")).toContainText("Mama Ricci's kitchen");
+  await expect(page.locator("h3")).toContainText("Franchises");
+  await expect(page.getByRole("main")).toContainText("Add Franchise");
+
+  await expect(page.locator("table")).toContainText("LotaPizza");
 });
