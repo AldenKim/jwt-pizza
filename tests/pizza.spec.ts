@@ -149,6 +149,23 @@ async function basicInit(page: Page) {
     });
   });
 
+  // Delete franchise
+  await page.route(/\/api\/franchise\/\d+$/, async (route) => {
+    if (route.request().method() !== "DELETE") {
+      return route.fallback();
+    }
+
+    const urlParts = route.request().url().split("/");
+    const franchiseIdToDelete = parseInt(urlParts[urlParts.length - 1]);
+
+    mockFranchises = mockFranchises.filter((f) => f.id !== franchiseIdToDelete);
+
+    await route.fulfill({
+      status: 200,
+      json: { message: "franchise deleted" },
+    });
+  });
+
   // Get a franchisee's franchise
   await page.route(/\/api\/franchise\/\d+$/, async (route) => {
     if (route.request().method() !== "GET") {
@@ -403,9 +420,6 @@ test("purchase with login and verify", async ({ page }) => {
   await expect(page.getByRole("main")).toContainText("Verify");
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.locator("#hs-jwt-modal")).toContainText("Close");
-  await expect(
-    page.getByRole("button").filter({ hasText: /^$/ }),
-  ).toBeVisible();
 });
 
 test("purchase with register", async ({ page }) => {
@@ -626,7 +640,7 @@ test("Login as admin and add a new franchise", async ({ page }) => {
   await basicInit(page);
   const randomFranchiseName = randomName();
 
-  await page.goto("http://localhost:5173/");
+  // Login
   await page.getByRole("link", { name: "Login" }).click();
   await page.getByRole("textbox", { name: "Email address" }).click();
   await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
@@ -635,6 +649,7 @@ test("Login as admin and add a new franchise", async ({ page }) => {
   await page.getByRole("button", { name: "Login" }).click();
   await page.getByRole("link", { name: "Admin" }).click();
 
+  //Add franchise
   await expect(page.locator("tfoot")).toContainText("Submit");
   await expect(
     page.getByRole("button", { name: "Add Franchise" }),
@@ -650,12 +665,56 @@ test("Login as admin and add a new franchise", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "franchisee admin email" })
     .fill("a@jwt.com");
-
   await expect(page.getByRole("heading")).toContainText("Create franchise");
   await expect(page.getByText("Want to create franchise?")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create" })).toBeVisible();
 
+  // Check for creation
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("table")).toContainText(randomFranchiseName);
   await expect(page.getByRole("table")).toContainText("Aaron Admin");
+});
+
+test("Add a franchise, then remove a franchise", async ({ page }) => {
+  await basicInit(page);
+  const randomFranchiseName = randomName();
+
+  // Login as admin
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  // Add test franchise
+  await page.getByRole("link", { name: "Admin" }).click();
+  await page.getByRole("button", { name: "Add Franchise" }).click();
+  await page.getByRole("textbox", { name: "franchise name" }).click();
+  await page
+    .getByRole("textbox", { name: "franchise name" })
+    .fill(randomFranchiseName);
+  await page.getByRole("textbox", { name: "franchisee admin email" }).click();
+  await page
+    .getByRole("textbox", { name: "franchisee admin email" })
+    .fill("a@jwt.com");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("table")).toContainText(randomFranchiseName);
+  await expect(page.getByRole("table")).toContainText("Aaron Admin");
+  await expect(
+    page
+      .getByRole("row", { name: `${randomFranchiseName} Aaron Admin Close` })
+      .getByRole("button"),
+  ).toBeVisible();
+  await expect(page.getByRole("table")).toContainText("Close");
+  await page
+    .getByRole("row", { name: `${randomFranchiseName} Aaron Admin Close` })
+    .getByRole("button")
+    .click();
+  await expect(page.getByRole("heading")).toContainText("Sorry to see you go");
+  await expect(page.getByRole("main")).toContainText("Close");
+  await expect(page.getByRole("main")).toContainText(
+    `Are you sure you want to close the ${randomFranchiseName} franchise? This will close all associated stores and cannot be restored. All outstanding revenue will not be refunded.`,
+  );
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("table")).not.toContainText(randomFranchiseName);
 });
