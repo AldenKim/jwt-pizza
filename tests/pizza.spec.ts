@@ -16,6 +16,13 @@ async function basicInit(page: Page) {
       password: "a",
       roles: [{ role: Role.Diner }],
     },
+    "f@jwt.com": {
+      id: "4",
+      name: "Jared Franchisee",
+      email: "f@jwt.com",
+      password: "franchisee",
+      roles: [{ role: Role.Diner }, { role: Role.Franchisee, objectId: "1" }],
+    },
   };
 
   // Register
@@ -164,23 +171,6 @@ async function basicInit(page: Page) {
 
     expect(route.request().method()).toBe("GET");
     await route.fulfill({ json: orderRes });
-  });
-
-  await page.route("*/**/api/user/me", async (route) => {
-    const meRes = {
-      id: loggedInUser?.id,
-      name: loggedInUser?.name,
-      email: loggedInUser?.email,
-      roles: [
-        {
-          role: loggedInUser?.roles,
-        },
-      ],
-      iat: 123,
-    };
-
-    expect(route.request().method()).toBe("GET");
-    await route.fulfill({ json: meRes });
   });
 
   await page.goto("/");
@@ -404,4 +394,21 @@ test("Navigate to franchise page not logged in", async ({ page }) => {
   await expect(page.locator("thead")).toContainText("Costs");
   await expect(page.locator("thead")).toContainText("Franchise Fee");
   await expect(page.getByRole("main")).toContainText("Unleash Your Potential");
+});
+
+test("Login as Franchisee and go diner dashboard", async ({ page }) => {
+  await basicInit(page);
+
+  // Login as Franchisee
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("f@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("franchisee");
+  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByRole("link", { name: "JF" }).click();
+
+  // Check for franchisee role
+  await expect(page.getByRole("main")).toContainText(", Franchisee on 1");
+  await expect(page.getByRole("main")).toContainText("f@jwt.com");
 });
