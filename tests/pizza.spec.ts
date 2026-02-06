@@ -25,6 +25,11 @@ async function basicInit(page: Page) {
     },
   };
 
+  let mockStores = [
+    { id: 1, name: "Lehi", totalRevenue: 1200.5 },
+    { id: 2, name: "Provo", totalRevenue: 850.0 },
+  ];
+
   // Register
   await page.route("*/**/api/auth", async (route) => {
     if (route.request().method() !== "POST") {
@@ -111,6 +116,45 @@ async function basicInit(page: Page) {
     };
     expect(route.request().method()).toBe("GET");
     await route.fulfill({ json: franchiseRes });
+  });
+
+  // Get a franchisee's franchise
+  await page.route(/\/api\/franchise\/\d+$/, async (route) => {
+    if (route.request().method() !== "GET") {
+      return route.fallback();
+    }
+    const userFranchiseRes = [
+      {
+        id: 2,
+        name: "pizzaPocket",
+        admins: [{ id: 4, name: "Jared Franchisee", email: "f@jwt.com" }],
+        stores: mockStores,
+      },
+    ];
+
+    await route.fulfill({ json: userFranchiseRes });
+  });
+
+  // Create a store
+  await page.route(/\/api\/franchise\/\d+\/store$/, async (route) => {
+    if (route.request().method() !== "POST") {
+      return route.fallback();
+    }
+
+    const requestBody = route.request().postDataJSON();
+    const storeResponse = {
+      id: Math.floor(Math.random() * 1000), // Simulate a new database ID
+      franchiseId: requestBody.franchiseId,
+      name: requestBody.name,
+      totalRevenue: 0,
+    };
+
+    mockStores.push(storeResponse);
+
+    await route.fulfill({
+      status: 200,
+      json: storeResponse,
+    });
   });
 
   // Order a pizza.
@@ -411,4 +455,59 @@ test("Login as Franchisee and go diner dashboard", async ({ page }) => {
   // Check for franchisee role
   await expect(page.getByRole("main")).toContainText(", Franchisee on 1");
   await expect(page.getByRole("main")).toContainText("f@jwt.com");
+});
+
+test("Go To Franchise Dashboard", async ({ page }) => {
+  await basicInit(page);
+
+  //Login as franchisee
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("f@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("franchisee");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  //Go to franchise dashboard
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+  await expect(page.getByRole("heading")).toContainText("pizzaPocket");
+  await expect(page.getByRole("main")).toContainText("Create store");
+  await expect(page.getByRole("main")).toContainText(
+    "Everything you need to run an JWT Pizza franchise. Your gateway to success.",
+  );
+});
+
+test("Login as Franchisee and Create a store", async ({ page }) => {
+  await basicInit(page);
+  const randomStoreName = randomName();
+
+  // Login
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("f@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill("franchisee");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  //Navigate to franchise dashboard
+  await page
+    .getByLabel("Global")
+    .getByRole("link", { name: "Franchise" })
+    .click();
+
+  //Create a store
+  await expect(page.getByRole("main")).toContainText("Create store");
+  await page.getByRole("button", { name: "Create store" }).click();
+  await expect(page.getByRole("heading")).toContainText("Create store");
+  await expect(page.locator("form")).toContainText("Cancel");
+  await expect(page.locator("form")).toContainText("Create");
+  await page.getByRole("textbox", { name: "store name" }).click();
+  await page.getByRole("textbox", { name: "store name" }).fill(randomStoreName);
+  await page.getByRole("button", { name: "Create" }).click();
+
+  //Check and make sure store was created
+  await expect(page.locator("tbody")).toContainText(randomStoreName);
 });
