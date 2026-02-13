@@ -58,13 +58,18 @@ async function basicInit(page: Page) {
     }
 
     const body = route.request().postDataJSON();
+
+    const newId = (Object.keys(validUsers).length + 10).toString();
+
     loggedInUser = {
-      id: "4",
+      id: newId,
       name: body.name,
       email: body.email,
       password: body.password,
       roles: [{ role: Role.Diner }],
     };
+
+    validUsers[body.email] = loggedInUser;
 
     await route.fulfill({ json: { user: loggedInUser, token: "abcdef" } });
   });
@@ -274,6 +279,37 @@ async function basicInit(page: Page) {
 
     expect(route.request().method()).toBe("GET");
     await route.fulfill({ json: orderRes });
+  });
+
+  //Update a user
+  await page.route(/\/api\/user\/\d+$/, async (route) => {
+    if (route.request().method() !== "PUT") {
+      return route.fallback();
+    }
+
+    const updatedUserReq = route.request().postDataJSON();
+
+    loggedInUser = {
+      ...loggedInUser,
+      ...updatedUserReq,
+    };
+
+    const userKey = Object.keys(validUsers).find(
+      (k) => validUsers[k].id === loggedInUser?.id,
+    );
+    if (userKey) {
+      validUsers[userKey] = { ...validUsers[userKey], ...updatedUserReq };
+    }
+
+    const updateRes = {
+      user: loggedInUser,
+      token: "abcdef-new-token",
+    };
+
+    await route.fulfill({
+      status: 200,
+      json: updateRes,
+    });
   });
 
   await page.goto("/");
@@ -719,16 +755,16 @@ test("Add a franchise, then remove a franchise", async ({ page }) => {
   await expect(page.getByRole("table")).not.toContainText(randomFranchiseName);
 });
 
-test("updateUser", async ({ page }) => {
-  const email = `user${Math.floor(Math.random() * 10000)}@jwt.com`;
-  await page.goto("/");
+test("update user test", async ({ page }) => {
+  await basicInit(page);
+
   await page.getByRole("link", { name: "Register" }).click();
-  await page.getByRole("textbox", { name: "Full name" }).fill("pizza diner");
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  await page.getByRole("textbox", { name: "Password" }).fill("diner");
+  await page.getByRole("textbox", { name: "Full name" }).fill("Kai Chen");
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).fill("a");
   await page.getByRole("button", { name: "Register" }).click();
 
-  await page.getByRole("link", { name: "pd" }).click();
+  await page.getByRole("link", { name: "KC" }).click();
 
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.locator("h3")).toContainText("Edit user");
@@ -742,8 +778,8 @@ test("updateUser", async ({ page }) => {
   await page.getByRole("link", { name: "Logout" }).click();
   await page.getByRole("link", { name: "Login" }).click();
 
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  await page.getByRole("textbox", { name: "Password" }).fill("diner");
+  await page.getByRole("textbox", { name: "Email address" }).fill("d@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).fill("a");
   await page.getByRole("button", { name: "Login" }).click();
 
   await page.getByRole("link", { name: "pd" }).click();
