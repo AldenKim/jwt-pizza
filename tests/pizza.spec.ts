@@ -343,6 +343,28 @@ async function basicInit(page: Page) {
     });
   });
 
+  await page.route(/\/api\/user\/\d+$/, async (route) => {
+    if (route.request().method() !== "DELETE") {
+      return route.fallback();
+    }
+
+    const urlParts = route.request().url().split("/");
+    const userIdToDelete = urlParts[urlParts.length - 1];
+
+    const userKey = Object.keys(validUsers).find(
+      (k) => validUsers[k].id === userIdToDelete,
+    );
+
+    if (userKey) {
+      delete validUsers[userKey];
+    }
+
+    await route.fulfill({
+      status: 200,
+      json: { message: "user deleted" },
+    });
+  });
+
   await page.goto("/");
 }
 
@@ -859,8 +881,58 @@ test("Look at list of users as admin", async ({ page }) => {
     page.getByRole("textbox", { name: "Filter users" }),
   ).toBeVisible();
 
+  await expect(
+    page.getByTestId("users-section").getByRole("cell", { name: "« »" }),
+  ).toBeVisible();
+
   // Make sure users are there
   await expect(page.getByRole("main")).toContainText("a@jwt.com");
   await expect(page.getByRole("main")).toContainText("d@jwt.com");
   await expect(page.getByRole("main")).toContainText("f@jwt.com");
+});
+
+test("Delete a user as admin", async ({ page }) => {
+  await basicInit(page);
+
+  // Login as admin
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByRole("link", { name: "Admin" }).click();
+
+  // Look at users and delete a user
+  await expect(
+    page.getByTestId("users-section").getByRole("heading"),
+  ).toContainText("Users");
+  await expect(
+    page.getByRole("button", { name: "Delete User" }).nth(1),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("users-section").getByRole("table"),
+  ).toContainText("Delete User");
+  await expect(
+    page.getByTestId("users-section").getByRole("table"),
+  ).toContainText("Kai Chen");
+  await expect(
+    page.getByTestId("users-section").getByRole("table"),
+  ).toContainText("d@jwt.com");
+  await page.getByRole("button", { name: "Delete User" }).nth(0).click();
+
+  // Delete page
+  await expect(page.getByRole("heading")).toContainText("Delete User");
+  await expect(page.getByRole("main")).toContainText(
+    `Are you sure you want to delete the user ${"Kai Chen"}? This cannot be restored.`,
+  );
+  await expect(page.getByRole("button", { name: "Delete User" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete User" }).click();
+
+  // Make sure user is deleted
+  await expect(
+    page.getByTestId("users-section").getByRole("table"),
+  ).not.toContainText("Kai Chen");
+  await expect(
+    page.getByTestId("users-section").getByRole("table"),
+  ).not.toContainText("d@jwt.com");
 });

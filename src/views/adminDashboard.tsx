@@ -57,6 +57,12 @@ export default function AdminDashboard(props: Props) {
     });
   }
 
+  async function deleteUser(user: User) {
+    navigate("/admin-dashboard/delete-user", {
+      state: { user: user },
+    });
+  }
+
   async function filterFranchises() {
     setFranchiseList(
       await pizzaService.getFranchises(
@@ -253,6 +259,8 @@ export default function AdminDashboard(props: Props) {
                         </tr>
                       </thead>
                       {userList.map((user, index) => {
+                        const isCurrentUser = props.user?.id === user.id;
+
                         return (
                           <tbody key={index}>
                             <tr className="border-b border-gray-200">
@@ -270,10 +278,16 @@ export default function AdminDashboard(props: Props) {
                               <td className="px-6 py-1 whitespace-nowrap text-end text-sm font-medium">
                                 <button
                                   type="button"
-                                  className="px-2 py-1 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-1 border-orange-400 text-orange-400  hover:border-orange-800 hover:text-orange-800"
+                                  className={`px-2 py-1 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-1 transition-colors
+              ${
+                isCurrentUser
+                  ? "border-neutral-300 text-neutral-300 cursor-not-allowed bg-neutral-50"
+                  : "border-orange-400 text-orange-400 hover:border-orange-800 hover:text-orange-800"
+              }`}
                                   onClick={() =>
-                                    console.log("Delete user", user)
+                                    !isCurrentUser && deleteUser(user)
                                   }
+                                  disabled={isCurrentUser}
                                 >
                                   <TrashIcon />
                                   Delete User
@@ -316,7 +330,7 @@ export default function AdminDashboard(props: Props) {
                             <button
                               className="w-12 p-1 text-sm font-semibold rounded-lg border border-transparent bg-white text-grey border-grey m-1 hover:bg-orange-200 disabled:bg-neutral-300"
                               onClick={() => setUserPage(userPage + 1)}
-                              disabled={userList.length < 10}
+                              disabled={userList.length <= 10}
                             >
                               »
                             </button>

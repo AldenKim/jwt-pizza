@@ -25,6 +25,7 @@ import Breadcrumb from "../components/breadcrumb";
 import { pizzaService } from "../service/service";
 import { Role, User } from "../service/pizzaService";
 import "preline/preline";
+import DeleteUser from "../views/deleteUser";
 
 declare global {
   interface Window {
@@ -142,6 +143,12 @@ export default function App() {
       component: <Logout setUser={setUser} />,
       constraints: [loggedIn],
       display: ["nav"],
+    },
+    {
+      title: "Delete user",
+      to: "/:subPath?/delete-user",
+      component: <DeleteUser />,
+      display: [],
     },
     { title: "Docs", to: "/docs/:docType?", component: <Docs />, display: [] },
     { title: "Opps", to: "*", component: <NotFound />, display: [] },
