@@ -164,6 +164,17 @@ class HttpPizzaService implements PizzaService {
     localStorage.setItem("token", token);
     return Promise.resolve(user);
   }
+
+  async listUsers(
+    page: number = 0,
+    limit: number = 10,
+    nameFilter: string = "*",
+  ): Promise<User[]> {
+    const { users } = await this.callEndpoint(
+      `/api/user?page=${page}&limit=${limit}&name=${nameFilter}`,
+    );
+    return Promise.resolve(users);
+  }
 }
 
 const httpPizzaService = new HttpPizzaService();
