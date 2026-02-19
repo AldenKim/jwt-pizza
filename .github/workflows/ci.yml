@@ -31,10 +31,10 @@ jobs:
         run: |
           npm ci && npm run build
 
-      # - name: Run tests
-      #   run: |
-      #     npx playwright install --with-deps chromium
-      #     npm run test:coverage
+      - name: Run tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:coverage
 
       # - name: Upload CI Coverage
       #   if: always() # This ensures the artifact is uploaded even if tests fail
@@ -43,12 +43,12 @@ jobs:
       #     name: ci-coverage-report
       #     path: coverage/
 
-      # - name: Update coverage
-      #   if: always()
-      #   run: |
-      #     coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-      #     color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
-      #     curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzacoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+      - name: Update coverage
+        if: always()
+        run: |
+          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
+          curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzacoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
 
       - name: Update dist artifact
         uses: actions/upload-artifact@v4
