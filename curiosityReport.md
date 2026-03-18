@@ -26,7 +26,7 @@ Main Features of Prometheus:
 I set up a simple express application with a couple of basic endpoints, similar to setups used for some of the instruction in class. I then used a open source library, `prom-client`, which is a Prometheus client library for Node.js applications to help collect metrics from Node.js applications, to collect those metrics locally.
 
 ### Setup
-1. Create a new directory and install express
+1. Create a new directory and install Express
 ```sh
 mkdir prometheusExample && cd prometheusExample
 npm init -y
@@ -55,7 +55,8 @@ client.collectDefaultMetrics({ register });
 const taskCounter = new client.Counter({
   name: 'service_tasks_total',
   help: 'Total number of processed tasks',
-  label_names: ['status']
+  labelNames: ['status'],
+  registers: [register],
 });
 register.registerMetric(taskCounter);
 
@@ -80,7 +81,7 @@ app.listen(3000, () => {
   console.log('Prometheus metrics available at http://localhost:3000/metrics');
 });
 ```
-5. Create a prometheus.yml file to configurate the data collection
+5. Create a prometheus.yml file to configure the data collection
 ```yml
 global:
   scrape_interval: 5s # Scrape every 5 seconds for the experiment
@@ -109,12 +110,12 @@ services:
 ```sh
 npm start
 ```
-2. In a separate terminal run this command to start running a seperate Prometheus server that will pull from our /metrics endpoint
+2. In a separate terminal, run this command to start running a separate Prometheus server that will pull from our /metrics endpoint
 ```sh
 docker compose up
 ```
 > [!NOTE]
-> Make sure you have docker desktop downloaded and running!
+> Make sure you have Docker Desktop downloaded and running!
 
 3. Call the endpoints to add some metrics, call the below however many times as you would like
 ```
@@ -129,19 +130,20 @@ curl http://localhost:3000/process/failure
 ```
 http://localhost:3000/metrics
 ```
-Where you can scroll down to the bottom of the page and see the metric that we specifically created
+You can scroll down to the bottom of the page and see the metric that we specifically created
 
 - Or on the separate server Prometheus offers:
 ```
 http://localhost:9090
 ```
-Where you can then query specific metrics such as the one we created called
+Where you can then query specific metrics, such as the one we created called
 ```
 service_tasks_total
 ```
 On a nicer looking UI!
 
 For either options, you will be able to see your metrics collected!
+![Prometheus Run Example](./PrometheusRunExample.png)
 
-
-
+## Conclusion
+Overall, it was a lot of fun deep diving into Prometheus, specifically after using Grafana for the deliverable in this class, and learning about how it really worked and how to run Prometheus as a service separately. It was really cool understanding how Grafana uses Prometheus, and the advantages behind using Prometheus, since it is quick and easy to set up separately. With the experiment I ran, it was easy to set up, run, collect metrics, and view them (though not organized) in a simple format. I was surprised at the ease and availability Prometheus provides, and I can see why Grafana and developers may choose Prometheus as a quick and easy way to collect metrics. I hope to be able to continue to use these amazing metrics collecting tools, as they are quite interesting to me.  
