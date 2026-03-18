@@ -10,4 +10,8 @@ While Prometheus and Grafana are used heavily together, they are both separate o
 
 Main Features of Prometheus:
 
-- 
+- Has a multi-dimensional data model for metrics. Data is identified by metric name and has key/value pairs along with time stamps to make a time series data
+- Prometheus comes with its own query language to grab metrics effectively called PromQL (which Grafana leverages)
+- Prometheus does not rely on distributed systems to store metrics. Their server nodes are "autonomous" and stores data directly on the disk of these server nodes. This makes setting up and collecting metrics easier and simpler
+- Metrics are mainly collected through a "Pull" model. This is done through HTTP, mainly, consistently grabbing data from your application
+- Offers multiple ways to visualize metrics (We will test Prometheus' own visualizations to see what Prometheus as a whole has to offer)
